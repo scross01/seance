@@ -51,7 +51,7 @@ A bundled [skill file](skills/seance-skill.md) provides AI agents with a complet
 
 ### And also
 
-Workspaces, session persistence across restarts, tabs within columns, a command palette, focus-follows-mouse, and no telemetry.
+Workspaces, session persistence across restarts, tabs within columns, a command palette, focus-follows-mouse, and no telemetry. Press **F11** to toggle fullscreen, or choose **Toggle Fullscreen** in the command palette. The header bar hides in fullscreen and returns when you exit.
 
 ## Installation
 

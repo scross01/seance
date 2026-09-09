@@ -10,8 +10,10 @@ import unittest
 
 
 @unittest.skipUnless(os.environ.get("SEANCE_TEST_BINARY"), "set SEANCE_TEST_BINARY for GUI validation")
-class GhosttyIntegrationTests(unittest.TestCase):
+class GhosttyTestCase(unittest.TestCase):
     config_extra = ""
+    env_extra = {}
+    shell_command = "/bin/bash --noprofile --norc"
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix="seance-ghostty-")
@@ -27,6 +29,7 @@ class GhosttyIntegrationTests(unittest.TestCase):
             self.env[key] = str(path)
         self.env.update(GDK_BACKEND="x11", DBUS_SESSION_BUS_ADDRESS="disabled:",
                         LIBGL_ALWAYS_SOFTWARE="1", NO_AT_BRIDGE="1", SHELL="/bin/bash")
+        self.env.update(self.env_extra)
         self.env.pop("SEANCE_DISABLE_SESSION_RESTORE", None)
         config = self.root / "config" / "seance"
         config.mkdir()
@@ -35,12 +38,16 @@ class GhosttyIntegrationTests(unittest.TestCase):
             '\n[behavior]\nconfirm-close-window = false\n' + self.config_extra)
         ghostty = self.root / "config" / "ghostty"
         ghostty.mkdir()
-        (ghostty / "config").write_text("command = /bin/bash --noprofile --norc\n")
+        (ghostty / "config").write_text("command = " + self.shell_command + "\n")
         self.log = (self.root / "stderr.log").open("w+")
         self.addCleanup(self.log.close)
         self.process = None
         self.addCleanup(self.stop)
+        self.prepare()
         self.start()
+
+    def prepare(self):
+        """Set up shell files or fixtures before the first surface starts."""
 
     def start(self):
         self.process = subprocess.Popen([self.binary], env=self.env, cwd=self.root,
@@ -79,6 +86,7 @@ class GhosttyIntegrationTests(unittest.TestCase):
             try:
                 if check():
                     return
+                last = None
             except (OSError, ValueError, AssertionError) as exc:
                 last = exc
             if self.process.poll() is not None:
@@ -86,7 +94,11 @@ class GhosttyIntegrationTests(unittest.TestCase):
             time.sleep(0.1)
         self.log.flush()
         self.log.seek(0)
-        self.fail(f"{description}: {last}\n{self.log.read()[-8000:]}")
+        try:
+            screen = self.call("surface.read_screen")["text"]
+        except (OSError, ValueError, AssertionError):
+            screen = "<unavailable>"
+        self.fail(f"{description}: {last}\n{self.log.read()[-8000:]}\nTerminal:\n{screen}")
 
     def print_marker(self, marker, surface=None):
         params = {"text": "printf '\\033[31mSEANCE_%s\\033[0m\\n' " + marker + "\n"}
@@ -97,6 +109,8 @@ class GhosttyIntegrationTests(unittest.TestCase):
             "surface.read_screen", {"surface_id": surface} if surface else None)["text"],
             "terminal output")
 
+
+class GhosttyIntegrationTests(GhosttyTestCase):
     def test_indexed_scrollback_survives_restart_and_cli_reads_it(self):
         self.wait(lambda: self.call("surface.read_screen").get("text"), "shell startup")
         self.print_marker("SAVED_COLOR_42")

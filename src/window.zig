@@ -805,6 +805,15 @@ pub const WindowState = struct {
         self.closeWorkspace(self.active_workspace);
     }
 
+    pub fn toggleFullscreen(self: *WindowState) void {
+        const win: *c.GtkWindow = @ptrCast(self.gtk_window);
+        if (c.gtk_window_is_fullscreen(win) != 0) {
+            c.gtk_window_unfullscreen(win);
+        } else {
+            c.gtk_window_fullscreen(win);
+        }
+    }
+
     /// Quit the entire application. Routes through g_application_quit so
     /// onShutdown saves all currently-open windows (with scrollback). If
     /// `confirm_close_window` is enabled and there's interesting state to
@@ -1197,9 +1206,16 @@ pub const WindowState = struct {
         c.adw_application_window_set_content(@ptrCast(window), toolbar_view);
 
         self.toolbar_view = @ptrCast(toolbar_view);
+        self.syncFullscreenChrome();
 
         // Push any existing unread count into the fresh badge.
         self.sidebar.refresh();
+    }
+
+    fn syncFullscreenChrome(self: *WindowState) void {
+        const tv = self.toolbar_view orelse return;
+        const is_fullscreen = c.gtk_window_is_fullscreen(@ptrCast(self.gtk_window));
+        c.adw_toolbar_view_set_reveal_top_bars(@ptrCast(tv), if (is_fullscreen != 0) 0 else 1);
     }
 
     /// Build the SSD chrome: the banner_box becomes the window's direct
@@ -1584,6 +1600,16 @@ pub fn create(wm: *WindowManager) !*WindowState {
         0,
     );
 
+    // Hide CSD title bar when entering fullscreen
+    _ = c.g_signal_connect_data(
+        @as(c.gpointer, @ptrCast(window)),
+        "notify::fullscreened",
+        @as(c.GCallback, @ptrCast(&onFullscreenChanged)),
+        @ptrCast(state),
+        null,
+        0,
+    );
+
     // Load theme-aware CSS
     loadThemeCss();
 
@@ -1725,6 +1751,11 @@ fn onWindowFocusChanged(_: *c.GObject, _: ?*anyopaque, data: c.gpointer) callcon
             fp.triggerFlash();
         }
     }
+}
+
+fn onFullscreenChanged(_: *c.GObject, _: ?*anyopaque, data: c.gpointer) callconv(.c) void {
+    const state: *WindowState = @ptrCast(@alignCast(data));
+    state.syncFullscreenChrome();
 }
 
 fn onWorkspaceSelect(index: usize) void {

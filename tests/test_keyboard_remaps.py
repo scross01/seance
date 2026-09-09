@@ -26,8 +26,9 @@ class PhysicalKeyboardTestCase(unittest.TestCase):
         self.assertTrue(select.select([server.stdout], [], [], 10)[0], "Xvfb startup timed out")
         display = ":" + server.stdout.readline().decode().strip()
         self.assertNotEqual(display, ":", "Xvfb failed to start")
-        self.app = integration.GhosttyIntegrationTests()
+        self.app = integration.GhosttyTestCase()
         self.app.config_extra = getattr(self, "config_extra", "")
+        self.app.env_extra = getattr(self, "env_extra", {})
         self.addCleanup(self.app.doCleanups)
         with patch.dict(os.environ, {"DISPLAY": display}):
             self.app.setUp()

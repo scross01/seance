@@ -33,6 +33,15 @@ Set `SEANCE_TEST_CODEX` to the real Codex binary (outside Séance's wrapper dire
 to also check hook loading and approval persistence using its local app-server.
 This check uses a temporary Codex home and makes no model calls.
 
+Fullscreen tests require Openbox, Xvfb, xdotool, setxkbmap, a C compiler, and
+libadwaita headers. They use a separate X server and window manager. Shell
+integration tests require zsh and check user startup files and both sets of hooks:
+
+```bash
+SEANCE_TEST_BINARY="$PWD/zig-out/bin/seance" python3 -m unittest discover -s tests -p 'test_fullscreen.py' -v
+SEANCE_TEST_BINARY="$PWD/zig-out/bin/seance" xvfb-run -a python3 -m unittest discover -s tests -p 'test_shell_integration.py' -v
+```
+
 Physical keyboard remap tests require `Xvfb`, `xdotool`, and `setxkbmap`.
 They create a separate X server and never modify your desktop's keyboard layout:
 

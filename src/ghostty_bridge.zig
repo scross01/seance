@@ -211,6 +211,18 @@ fn createWrapperResourcesDir() bool {
         }
     }
 
+    // Copy .zshenv rather than symlinking it: zsh's :A modifier resolves
+    // symlinks when this bootstrap locates its sibling ghostty-integration.
+    // It must find our wrapper so both Ghostty and Seance hooks are loaded.
+    {
+        var zbuf: [std.fs.max_path_bytes]u8 = undefined;
+        const source = std.fmt.bufPrint(&zbuf, "{s}/shell-integration/zsh/.zshenv", .{real}) catch return false;
+        std.Io.Dir.cwd().copyFile(source, wd, "shell-integration/zsh/.zshenv", io.get(), .{}) catch |e| {
+            std.log.warn("ghostty_bridge: failed to copy .zshenv: {}", .{e});
+            return false;
+        };
+    }
+
     // Write wrapper shell integration scripts
     writeShellWrapper(wd, "shell-integration/bash/ghostty.bash", real, "/shell-integration/bash/ghostty.bash", "/bash-integration.sh") catch return false;
     writeShellWrapper(wd, "shell-integration/zsh/ghostty-integration", real, "/shell-integration/zsh/ghostty-integration", "/zsh-integration.sh") catch return false;
