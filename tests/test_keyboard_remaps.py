@@ -12,7 +12,7 @@ import test_ghostty_integration as integration
 
 
 @unittest.skipUnless(os.environ.get("SEANCE_TEST_BINARY"), "set SEANCE_TEST_BINARY for GUI validation")
-class KeyboardRemapTests(unittest.TestCase):
+class PhysicalKeyboardTestCase(unittest.TestCase):
     def setUp(self):
         for command in ("Xvfb", "xdotool", "setxkbmap"):
             if not shutil.which(command):
@@ -27,6 +27,7 @@ class KeyboardRemapTests(unittest.TestCase):
         display = ":" + server.stdout.readline().decode().strip()
         self.assertNotEqual(display, ":", "Xvfb failed to start")
         self.app = integration.GhosttyIntegrationTests()
+        self.app.config_extra = getattr(self, "config_extra", "")
         self.addCleanup(self.app.doCleanups)
         with patch.dict(os.environ, {"DISPLAY": display}):
             self.app.setUp()
@@ -60,7 +61,7 @@ class KeyboardRemapTests(unittest.TestCase):
         return subprocess.run(args, env=self.app.env, check=True, capture_output=True,
                               text=True, timeout=10).stdout
 
-    def capture(self, options="", variant="", kitty=False):
+    def capture(self, options="", variant="", kitty=False, bracketed_paste=False):
         self.run_x("setxkbmap", "-layout", "us", "-variant", variant, "-option", "", "-option", options)
         self.output = self.app.root / "keys.bin"
         ready = self.app.root / "ready"
@@ -69,6 +70,7 @@ class KeyboardRemapTests(unittest.TestCase):
             "import os, tty\nfrom pathlib import Path\n"
             "tty.setraw(0)\n" +
             ("os.write(1, b'\x1b[>11u')\n" if kitty else "") +
+            ("os.write(1, b'\x1b[?2004h')\n" if bracketed_paste else "") +
             f"out = open({str(self.output)!r}, 'wb', buffering=0)\n"
             f"Path({str(ready)!r}).touch()\n"
             "while True:\n    out.write(os.read(0, 4096))\n"
@@ -87,6 +89,8 @@ class KeyboardRemapTests(unittest.TestCase):
     def received(self):
         return self.output.read_bytes()
 
+
+class KeyboardRemapTests(PhysicalKeyboardTestCase):
     def test_caps_backspace_keeps_real_lock_state_and_release(self):
         self.capture("caps:backspace,shift:both_capslock", kitty=True)
         self.tap(66)  # Caps -> Backspace, initially unlocked.

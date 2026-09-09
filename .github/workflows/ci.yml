@@ -58,3 +58,8 @@ jobs:
         run: python3 -m unittest discover -s tests -p 'test_keyboard_remaps.py' -v
         env:
           SEANCE_TEST_BINARY: ${{ github.workspace }}/zig-out/bin/seance
+
+      - name: IME tests
+        run: python3 -m unittest discover -s tests -p 'test_ime.py' -v
+        env:
+          SEANCE_TEST_BINARY: ${{ github.workspace }}/zig-out/bin/seance

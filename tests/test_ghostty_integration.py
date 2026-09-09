@@ -11,6 +11,8 @@ import unittest
 
 @unittest.skipUnless(os.environ.get("SEANCE_TEST_BINARY"), "set SEANCE_TEST_BINARY for GUI validation")
 class GhosttyIntegrationTests(unittest.TestCase):
+    config_extra = ""
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix="seance-ghostty-")
         self.addCleanup(self.tmp.cleanup)
@@ -30,7 +32,7 @@ class GhosttyIntegrationTests(unittest.TestCase):
         config.mkdir()
         (config / "config.toml").write_text(
             '[socket]\npath = ' + json.dumps(str(self.socket_path)) +
-            '\n[behavior]\nconfirm-close-window = false\n')
+            '\n[behavior]\nconfirm-close-window = false\n' + self.config_extra)
         ghostty = self.root / "config" / "ghostty"
         ghostty.mkdir()
         (ghostty / "config").write_text("command = /bin/bash --noprofile --norc\n")

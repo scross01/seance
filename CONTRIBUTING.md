@@ -40,6 +40,23 @@ They create a separate X server and never modify your desktop's keyboard layout:
 SEANCE_TEST_BINARY="$PWD/zig-out/bin/seance" python3 -m unittest discover -s tests -p 'test_keyboard_remaps.py' -v
 ```
 
+IME tests also use isolated X servers. They exercise GTK's compose engine and a
+test input context for Korean syllable transitions, asynchronous commits, focus,
+and cursor positioning. The test context requires a C compiler and GTK4 headers:
+
+```bash
+SEANCE_TEST_BINARY="$PWD/zig-out/bin/seance" python3 -m unittest discover -s tests -p 'test_ime.py' -v
+```
+
+For a desktop check, build and launch `./zig-out/bin/seance` at your next restart
+so an older running instance does not handle the launch. Enable your Korean
+input method and type `안녕` followed by a space. Also insert Korean text into the
+middle of an existing shell command, and switch panes during composition. Check
+that syllables appear once, the candidate popup follows the cursor, and ordinary
+typing and shortcuts still work after switching back. The automated X11 tests do
+not replace this check with your usual IME on Wayland. Switch back to your normal
+input method when finished.
+
 ## Code style
 
 - Match existing style. Zig source uses the standard formatter (`zig fmt`).
